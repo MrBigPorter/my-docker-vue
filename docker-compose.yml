@@ -10,7 +10,7 @@ services:
     #choice 2
     build:
       context: ./frontend
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile
     container_name: lucky-frontend-prod
     ports:
       - "8080:80"
@@ -28,7 +28,7 @@ services:
     # choice 2
     build:
       context: ./backend
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile
     container_name: lucky-backend-prod
     environment:
       - NODE_ENV=${NODE_ENV}
