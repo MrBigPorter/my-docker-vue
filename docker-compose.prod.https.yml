@@ -1,0 +1,93 @@
+services:
+  # -----------------------------------------------------
+  # 1️⃣ 前端（已构建好的静态文件）
+  # -----------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: lucky-frontend-prod
+    networks:
+      - lucky-net
+
+  # -----------------------------------------------------
+  # 2️⃣ 后端：NestJS
+  # -----------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: lucky-backend-prod
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - lucky-net
+
+  # -----------------------------------------------------
+  # 3️⃣ 数据库：PostgreSQL
+  # -----------------------------------------------------
+  db:
+    image: postgres:13.2
+    container_name: lucky-db-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - lucky-net
+
+  # -----------------------------------------------------
+  # 4️⃣ Nginx + Certbot (反向代理 + 自动 HTTPS)
+  # -----------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: lucky-nginx
+    depends_on:
+      - frontend
+      - backend
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+      - ./frontend/dist:/usr/share/nginx/html
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - lucky-net
+
+  # -----------------------------------------------------
+  # 5️⃣ Certbot 自动签发和续签证书
+  # -----------------------------------------------------
+  certbot:
+    image: certbot/certbot
+    container_name: lucky-certbot
+    volumes:
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+    entrypoint: >
+      sh -c "certbot certonly --webroot --webroot-path=/var/www/certbot
+      --email admin@${DOMAIN} --agree-tos --no-eff-email -d ${DOMAIN} || true"
+    networks:
+      - lucky-net
+
+# -----------------------------------------------------
+# 网络和卷
+# -----------------------------------------------------
+networks:
+  lucky-net:
+
+volumes:
+  db_data:

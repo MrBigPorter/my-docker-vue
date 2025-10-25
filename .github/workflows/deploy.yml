@@ -1,0 +1,71 @@
+name: 🚀 Deploy Lucky App (Frontend + Backend)
+
+on:
+  push:
+    branches:
+      - main   # listen to pushes to this branch
+  workflow_dispatch:  # 手动触发也支持
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest  # github's virtual environment
+    timeout-minutes: 20   # 防止卡死超时
+
+    steps:
+      # 1 check out the code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # set up the node environment
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+         node-version: 20
+         cache: 'npm'
+
+      # install dependencies
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      # 2 Login to DockerHub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      # 3 build and push Docker images
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile.prod
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/lucky-vue-frontend:latest
+
+      # 4 build and push backend image
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.prod
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/lucky-backend:latest
+
+      # 5 deploy to remote server via SSH
+      - name: Deploy to remote server via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_KEY }}
+          script_stop: true
+          script: |
+            cd /root/lucky-app
+            echo "🔻 Stopping old containers..."
+            docker compose -f docker-compose.prod.yml down
+            echo "⬇️ Pulling new images..."
+            docker compose -f docker-compose.prod.yml pull
+            echo "🚀 Starting containers..."
+            docker compose -f docker-compose.prod.yml up -d
+            echo "✅ Deployment done!"

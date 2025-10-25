@@ -1,0 +1,33 @@
+# 版本号
+version: "3.9"
+
+# 要运行的容器
+services:
+  # 一个服务叫vue-app
+  vue-app:
+    # 告诉如何构建这个容器
+    build:
+      # 构建时的上下文时当前目录 就像 docker build -f Dockerfile.dev . 这个.
+      context: .
+      # 使用开发版本dockerfile,而不是生产版本dockerfile
+      dockerfile: frontend/Dockerfile.dev
+    # 设置容器的名字
+    container_name: vue-dev
+    # 宿主机端口 5173 → 容器内部端口 5173
+    ports:
+      - "5173:5173"
+    # volumes:（核心）
+    volumes:
+      # 把宿主机当前项目目录挂载到容器的 /work，实时同步源码（热更新核心）
+      - .:/work
+      # 避免 node_modules 被宿主机覆盖；让容器使用自己安装的依赖版本
+      - /work/node_modules
+    # 在 macOS / Windows 下，Vite（底层用 chokidar）监听文件变化有兼容问题。
+    # 强制启用 “轮询模式 (polling mode)” 文件监视
+    environment:
+      - CHOKIDAR_USEPOLLING=true   # 修复 Mac 上文件监听问题
+    extra_hosts:
+      # 这行让容器能访问到宿主机的网络
+      - "host.docker.internal:host-gateway"
+      #容器启动后执行的命令，相当于你在终端运行：npm run dev -- --host 0.0.0.0
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
