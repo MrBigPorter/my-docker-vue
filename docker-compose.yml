@@ -1,61 +1,69 @@
 version: "3.9"
 
 services:
+  # -----------------------------------------------------
+  # 1️⃣ 前端服务：Vue + Nginx 提供静态资源和 API 反向代理
+  #
   frontend:
+    # choice 1
+    #image: my-docker-vue-frontend:latest
+    #choice 2
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
-    container_name: lucky-vue-dev
+      dockerfile: Dockerfile.prod
+    container_name: lucky-frontend-prod
     ports:
-      - "${FRONTEND_PORT}:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    env_file:
-      - ./frontend/.env
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-    command: ["npm", "run", "dev","--", "--host", "0.0.0.0"]
+      - "8080:80"
     depends_on:
       - backend
     networks:
-      - lucky-net
+      - app
 
+  # -----------------------------------------------------
+  # 2️⃣ 后端服务：NestJS
+  # -----------------------------------------------------
   backend:
+    # choice 1
+    #image: my-docker-lucky-backend:latest
+    # choice 2
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
-    container_name: lucky-backend-dev
+      dockerfile: Dockerfile.prod
+    container_name: lucky-backend-prod
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - DATABASE_URL=${DATABASE_URL}
     ports:
-      - "${BACKEND_PORT}:3000"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-    command: ["npm", "run", "start:dev"]
+      - "3000:3000"
     depends_on:
-      - db
-    env_file:
-      - ./backend/.env
+       db:
+         condition: service_healthy
     networks:
-      - lucky-net
+      - app
 
   db:
     image: postgres:13.2
-    container_name: lucky_db
+    container_name: lucky_db_prod
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "${POSTGRES_PORT}:5432"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
-      - lucky-net
+      - app
 
+# -----------------------------------------------------
+# 4️⃣ 网络和卷
+# -----------------------------------------------------
 networks:
-  lucky-net:
+  app:
 
 volumes:
-  db_data:
+  db_data_prod:
