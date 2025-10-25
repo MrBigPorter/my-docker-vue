@@ -5,12 +5,12 @@ import { Module, Controller, Get } from '@nestjs/common';
 class AppController {
     @Get('hello')
     getHello() {
-        return { message: 'Hello from NestJS + Docker!11' };
+        return { message: 'Hello from NestJS + Docker! ✅' };
     }
 
     @Get('healthz')
     healthCheck() {
-        return { message: 'healthz===>ok' };
+        return { status: 'ok ✅' };
     }
 }
 
@@ -19,7 +19,12 @@ class AppModule {}
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
+
+    // ✅ 允许跨域 (前端才能访问)
+    app.enableCors();
+
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');
+    console.log(`✅ Backend running on http://localhost:${port}`);
 }
 bootstrap();
