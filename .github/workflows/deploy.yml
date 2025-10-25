@@ -28,8 +28,11 @@ jobs:
       # install dependencies
       - name: Install dependencies
         run: ｜
-          cd frontend && npm ci --prefer-offline --no-audit --no-fund
-          cd ../backend && npm ci --prefer-offline --no-audit --no-fund
+          echo "📦 Installing frontend dependencies..."
+          cd ${{ github.workspace }}/frontend && npm ci --prefer-offline --no-audit --no-fund
+          
+          echo "📦 Installing backend dependencies..."
+          cd ${{ github.workspace }}/backend && npm ci --prefer-offline --no-audit --no-fund
 
       # 2 Login to DockerHub
       - name: Login to Docker Hub
