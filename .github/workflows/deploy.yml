@@ -27,7 +27,9 @@ jobs:
 
       # install dependencies
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: ｜
+          cd frontend && npm ci --prefer-offline --no-audit --no-fund
+          cd ../backend && npm ci --prefer-offline --no-audit --no-fund
 
       # 2 Login to DockerHub
       - name: Login to Docker Hub
