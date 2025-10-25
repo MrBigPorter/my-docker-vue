@@ -1,9 +1,9 @@
 <script setup>
 import HelloWorld from './components/HelloWorld.vue'
 import TheWelcome from './components/TheWelcome.vue'
-fetch('/api/hello')
+fetch(`${import.meta.env.VITE_API_BASE_URL}/api/hello`)
     .then(res => res.json())
-    .then(data => console.log(data))
+    .then(console.log)
 </script>
 
 <template>
